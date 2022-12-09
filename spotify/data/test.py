@@ -15,14 +15,14 @@ CLIENT_SECRET = "2a21c07b2a1d4acea157cb60de098142"
 new_list = []
 grant_type = 'client_credentials'
 body_params = {'grant_type' : grant_type}
-csvheaders = ["Artists"]
+csvheaders = ["Song Name", "Artists", "Genre"]
 
 url='https://accounts.spotify.com/api/token'
 response = requests.post(url, data=body_params, auth = (CLIENT_ID, CLIENT_SECRET)) 
 
 access_token = response.json().get('access_token')
 
-base_url = 'https://api.spotify.com/v1/users/x5raulz6ufun7mia2v0s6oqeq/playlists/4CPdJAFwZhgik31FK76Pow/' 
+base_url = 'https://api.spotify.com/v1/users/x5raulz6ufun7mia2v0s6oqeq/playlists/4X8mtKyMYDYdvm2R0RfQvc/' 
 
 headers = {
     'Authorization': 'Bearer {}'.format(access_token)
@@ -30,32 +30,74 @@ headers = {
 }
 
 response = requests.get(base_url,headers=headers).json()
-
 play = response['tracks']['items']   #['track']-->['album']-->['artists']-->['name']
 
 
 
-#to get the artists
 
+
+
+
+
+#Songs
+for j in play:
+    print(j['track']['name'])
+
+#Artists
 for j in play:
     listings = [j['track']['album']['artists']]
     for s in listings:
         artists = [s[0]['name']]
-        new_list.append(artists)
+        new_list.add(artists)
+
+
+#Genres
+for j in play:
+    artist = [j['track']['album']['artists']]
+    for g in artist:
+        genre = g[0]['href']
+        response2 = requests.get(genre,headers=headers).json()
+        genre_1 = response2['genres']
+        new_list.append(genre_1)        
+        genre_list = ','.join(str(v) for v in new_list)  
+
+
+'''
+
+#Popularity
+for j in play:
+    artist = [j['track']['album']['artists']]
+    for g in artist:
+        genre = g[0]['href']
+        response2 = requests.get(genre,headers=headers).json()
+        genre_1 = response2['popularity']
+        new_list.append(genre_1)        
+        genre_list = ','.join(str(v) for v in new_list)  
 
 
 
-with open('C:/projects/Data Engineering/py/apicalls/spotify/my_artists.csv', 'w', encoding='UTF-8', newline='') as file:
-    writer = csv.writer(file)
-    writer.writerow(csvheaders)
-    writer.writerows(new_list)
+
+response2 = requests.get(genre,headers=headers).json()
+
+genre_1 = response2['genres']
+        
+print(type(genre_1))
 
 
 
+for gx in genre_1:
+    print(gx)
 
 
+    artist_name = j["track"]["artists"][0]["name"]
+    artist_pop = j["popularity"]
+    artist_genres = j["genres"]
 
-'''create a pretty table object
+
+print(artist_genres)
+
+
+create a pretty table object
 tableobj = []
 csvheaders = ["currency_name","currency_symbol", "price", "percent_change_24h", "percent_change_7d", "percent_change_30d"]
 
