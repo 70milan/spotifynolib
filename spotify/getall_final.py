@@ -1,11 +1,14 @@
 import requests
 import pandas as pd
+import matplotlib.pyplot as plt 
+from pandasql import sqldf
+from urllib.parse import urlencode
 #import json
+import webbrowser
+import base64
 
-
-
-CLIENT_ID = "ca7fbe12e14546cb94ec1ec90c536bce"
-CLIENT_SECRET = "2a21c07b2a1d4acea157cb60de098142"
+client_id = "ca7fbe12e14546cb94ec1ec90c536bce"
+client_secret = "764ad9c13b9a475288eb7f5f394a2ed8"
 
 limit = 20
 offset = 0
@@ -21,13 +24,44 @@ diff_scores = []
 album_list=[]
 #access_token = "BQDeV0IiPAN2p1fAmnin7Exdq5JOCrcvEZkdZe_xAfgcrw0v5EQMmTjdb8UsGCuijVboj4uLd24d82FN1fDVPd3rCCSHBVuxS4nHs3AEIurb2F67SRw"
 
-response = requests.get('https://api.spotify.com/v1/me/tracks/?access_token=BQAK53qidG3z_6K2HjmsHevezDeTZze_swCXn6i_v1z_BP4tY17sQkRC3aAXJLG48J9PdOLqfpW_126KHaCcmCNAx6IjHN-KsDCUA7XRQ_E4S-rmwxM8YJgi6MzDrYAkAf1bHb_Yioh3JuzXVK-agxqaloRHJEZ1ZQDwYKuvuTOZ9GM08dzRm6RTotND8lHhK8wF5d-wDS8p').json()
 
-access_token = "BQAK53qidG3z_6K2HjmsHevezDeTZze_swCXn6i_v1z_BP4tY17sQkRC3aAXJLG48J9PdOLqfpW_126KHaCcmCNAx6IjHN-KsDCUA7XRQ_E4S-rmwxM8YJgi6MzDrYAkAf1bHb_Yioh3JuzXVK-agxqaloRHJEZ1ZQDwYKuvuTOZ9GM08dzRm6RTotND8lHhK8wF5d-wDS8p"
+
+
+auth_headers = {
+    "client_id": client_id,
+    "response_type": "code",
+    "redirect_uri": "http://localhost:7777/callback",
+    "scope": "user-library-read"
+}
+
+
+
+webbrowser.open("https://accounts.spotify.com/authorize?" + urlencode(auth_headers))
+
+code = str(input("enter your code here: "))
+
+encoded_credentials = base64.b64encode(client_id.encode() + b':' + client_secret.encode()).decode("utf-8")
+
+token_headers = {
+    "Authorization": "Basic " + encoded_credentials,
+    "Content-Type": "application/x-www-form-urlencoded"
+}
+
+token_data = {
+    "grant_type": "authorization_code",
+    "code": code,
+    "redirect_uri": "http://localhost:7777/callback"
+}
+
+r = requests.post("https://accounts.spotify.com/api/token", data=token_data, headers=token_headers)
+
+access_token = r.json()["access_token"]
 
 headers = {
 'Authorization': 'Bearer {}'.format(access_token)
 }
+
+response = requests.get('https://api.spotify.com/v1/me/tracks', headers=headers).json()
 
 total = response['total']  #['track']-->['album']-->['artists']-->['name']
 
@@ -47,7 +81,8 @@ for offset in range(0, total, 20):
         all_items.extend(getter)          
 
 for j in all_items:
-    dateAdd = j['added_at'] #added date
+    dateAddd = j['added_at'] 
+    dateAdd = dateAddd[0:10]#added date
     add.append(dateAdd)
     s_n = [j['track']['name']]
     Id = [j['track']['id']] #id
@@ -72,12 +107,6 @@ for j in all_items:
         genress = ', '.join(str(v) for v in g_n) 
         genre_list.append(genress) 
 
-
-
-
-
-df = pd.DataFrame({"id": ids, "date_added":add,"track_list": song_list,"album_name" : album_list, "artists_list": artist_list, "genre_list": genre_list})
-
 #########Get Audio features###########
 
 url = "https://api.spotify.com/v1/audio-features/"
@@ -90,19 +119,39 @@ for i in ids:
     ,res['instrumentalness'],res['liveness'],res['valence'], res['tempo']]
     diff_scores.append(dance_score)
 
+
+
+df = pd.DataFrame({"id": ids, "date_added":add,"track_list": song_list,"album_name" : album_list, "artists_list": artist_list, "genre_list": genre_list})
 df2 = pd.DataFrame(diff_scores)
 df2.columns=['id','danceability','energy','key','loudness','mode','speechiness','acousticness', 'instrumentalness','liveness','valence', 'tempo']
 df_merged = df.merge(df2)
 df_merged.to_csv('C:/projects/Data Engineering/py/apicalls/spotify/data/song_details.csv', encoding='utf-8')
 
-#################################################
-
-#################################################
-
-#################################################
-
-#################################################
+#visualization
 '''
+
+
+q = "SELECT * FROM df_target LIMIT 3"
+sqldf(q, globals())
+
+
+
+
+
+
+
+
+
+
+
+
+
+df_merged.plot(x="artists_list", y="track_list", kind="bar")
+#################################################
+#################################################
+#################################################
+#################################################
+
 for a in all_items:
     items = a['added_at'] #added date
     add.append(items)
@@ -112,20 +161,12 @@ for a in all_items:
     for artists in a['track']['album']['artists'][0]["name"]
     artist_list.append(artists) #artists 
 
-
 for g in a['track']['album']['artists'][0]['href']:
     print(genres)
-
-
 
     response2 = requests.get(genres,headers=headers).json()
     g_n = response2['genres']
     genre_list.append(g_n) 
-        
-
-
-
-
         href = genres['href']
         hrefs.append(href)
         for refs in hrefs:
@@ -133,19 +174,8 @@ for g in a['track']['album']['artists'][0]['href']:
             g_n = response2['genres']
             genre_list.append(g_n) 
  
-
 df = pd.DataFrame({"date_added":add,"track_list": song_list,"artists_list": artist_list, "genre_list": genre_list})
-
-
-
-
-
-
-
-            
-            
-         
-                artist = [items[0]['track']['album']['artists']]
+    artist = [items[0]['track']['album']['artists']]
                 for g in artist:
                     artist_name = g[0]['name']
                     artist_list.append(artist_name)
@@ -154,11 +184,8 @@ df = pd.DataFrame({"date_added":add,"track_list": song_list,"artists_list": arti
                     g_n = response2['genres']
                     genress = ', '.join(str(v) for v in g_n) 
                     genre_list.append(genress) 
-
-
-          
+         
 url = "https://api.spotify.com/v1/audio-features/"
-
 for i in ids:
     urls = url + i
     res = requests.get(urls, i, headers=headers).json()
@@ -166,30 +193,10 @@ for i in ids:
     ,res['loudness'],res['mode'],res['speechiness'],res['acousticness']
     ,res['instrumentalness'],res['liveness'],res['valence'], res['tempo']]
     diff_scores.append(dance_score)
-
-
-
-
 df = pd.DataFrame({"id": ids, "name" : song_list, "Date_added": date_add ,"artists" : artist_list,"genre" : genre_list})
 df2 = pd.DataFrame(diff_scores)
 df2.columns=['id','danceability','energy','key','loudness','mode','speechiness','acousticness', 'instrumentalness','liveness','valence', 'tempo']
 df_merged = df.merge(df2)
 df.to_csv('C:/projects/Data Engineering/py/apicalls/spotify/data/song_details.csv', encoding='utf-8')
-
 df2.to_csv('C:/projects/Data Engineering/py/apicalls/spotify/data/dance_song_details.csv', encoding='utf-8')
-
-
-   
-
-
-
-
-
-
-
-
-
-
-
-
 df = pd.DataFrame({"song": song_list})'''
