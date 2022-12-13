@@ -63,8 +63,9 @@ headers = {
 
 response = requests.get('https://api.spotify.com/v1/me/tracks', headers=headers).json()
 
-total = response['total']  #['track']-->['album']-->['artists']-->['name']
+total = response['total']  
 
+print("Total 'liked songs' found: ", total)
 ##$ to save the json object ##
 
 '''
