@@ -126,8 +126,6 @@ df = pd.DataFrame({"id": ids, "date_added":add,"track_list": song_list,"album_na
 df2 = pd.DataFrame(diff_scores)
 df2.columns=['id','danceability','energy','key','loudness','mode','speechiness','acousticness', 'instrumentalness','liveness','valence', 'tempo']
 df_merged = df.merge(df2)
-df_merged.to_csv('C:/projects/Data Engineering/py/apicalls/spotify/data/song_details.csv', encoding='utf-8')
-
 #visualization
 '''
 
