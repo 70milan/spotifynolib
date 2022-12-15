@@ -22,9 +22,6 @@ genre_list = []
 ids = []
 diff_scores = []
 album_list=[]
-#access_token = "BQDeV0IiPAN2p1fAmnin7Exdq5JOCrcvEZkdZe_xAfgcrw0v5EQMmTjdb8UsGCuijVboj4uLd24d82FN1fDVPd3rCCSHBVuxS4nHs3AEIurb2F67SRw"
-
-
 
 
 auth_headers = {
@@ -33,8 +30,6 @@ auth_headers = {
     "redirect_uri": "http://localhost:7777/callback",
     "scope": "user-library-read"
 }
-
-
 
 webbrowser.open("https://accounts.spotify.com/authorize?" + urlencode(auth_headers))
 
@@ -63,7 +58,7 @@ headers = {
 
 response = requests.get('https://api.spotify.com/v1/me/tracks', headers=headers).json()
 
-total = response['total']  
+total = response['total']  #total
 
 print("Total 'liked songs' found: ", total)
 ##$ to save the json object ##
@@ -126,5 +121,3 @@ df = pd.DataFrame({"id": ids, "date_added":add,"track_list": song_list,"album_na
 df2 = pd.DataFrame(diff_scores)
 df2.columns=['id','danceability','energy','key','loudness','mode','speechiness','acousticness', 'instrumentalness','liveness','valence', 'tempo']
 df_merged = df.merge(df2)
-
-
