@@ -100,8 +100,8 @@ for j in all_items:
         href = g[0]['href']
         response2 = requests.get(href,headers=headers).json()
         g_n = response2['genres']
-        genress = ', '.join(str(v) for v in g_n) 
-        genre_list.append(genress) 
+        #genress = ', '.join(str(v) for v in g_n) 
+        genre_list.append(g_n) 
 
 #########Get Audio features###########
 
@@ -117,7 +117,11 @@ for i in ids:
 
 
 
-df = pd.DataFrame({"id": ids, "date_added":add,"track_list": song_list,"album_name" : album_list, "artists_list": artist_list, "genre_list": genre_list})
+df = pd.DataFrame({"id": ids, "date_added":add,"track_list": song_list,"album_name" : album_list, "artists_list": artist_list})
 df2 = pd.DataFrame(diff_scores)
 df2.columns=['id','danceability','energy','key','loudness','mode','speechiness','acousticness', 'instrumentalness','liveness','valence', 'tempo']
-df_merged = df.merge(df2)
+df3 = pd.DataFrame(genre_list)
+df3.columns=['genre1','genre2','genre3','genre4','genre5','genre6','genre7','genre8', 'genre9','genre10','genre11', 'genre12', 'genre13', 'genre14', 'genre15', 'genre16']
+dfmerged = pd.concat([df, df2, df3], join='outer', axis=1)
+
+#dfmerged.to_csv('path/filename.csv', encoding='utf-8')
