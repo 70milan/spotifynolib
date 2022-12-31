@@ -3,51 +3,20 @@ import pandas as pd
 import matplotlib.pyplot as plt 
 from pandasql import sqldf
 from urllib.parse import urlencode
-#import json
 import webbrowser
+from sqlalchemy import create_engine
 import base64
-import psycopg2
-from config import config
+#import psycopg2
+#import json
+#from config import config
+
+
+#CREATING ENGINE FOR POSTGRES DB CONNECTION
+engine = create_engine('postgresql://postgres:3231@localhost:5432/postgres')
 
 #postgres DB connection#
 
-
-def connect():
-    """ Connect to the PostgreSQL database server """
-    conn = None
-    try:
-        # read connection parameters
-        params = config()
-
-        # connect to the PostgreSQL server
-        print('Connecting to the PostgreSQL database...')
-        conn = psycopg2.connect(**params)
-		
-        # create a cursor
-        cur = conn.cursor()
-        
-	# execute a statement
-        print('PostgreSQL database version:')
-        cur.execute('SELECT version()')
-
-        # display the PostgreSQL database server version
-        db_version = cur.fetchone()
-        print(db_version)
-       
-	# close the communication with the PostgreSQL
-        cur.close()
-    except (Exception, psycopg2.DatabaseError) as error:
-        print(error)
-    finally:
-        if conn is not None:
-            conn.close()
-            print('Database connection closed.')
-
-
-if __name__ == '__main__':
-    connect()
-#spotify api connection process
-
+"""spotify api connection process"""
 
 client_id = "ca7fbe12e14546cb94ec1ec90c536bce"
 client_secret = "764ad9c13b9a475288eb7f5f394a2ed8"
@@ -64,7 +33,6 @@ genre_list = []
 ids = []
 diff_scores = []
 album_list=[]
-
 
 auth_headers = {
     "client_id": client_id,
@@ -152,7 +120,6 @@ for i in ids:
     diff_scores.append(dance_score)
 
 
-
 df = pd.DataFrame({"id": ids, "date_added":add,"track_list": song_list,"album_name" : album_list, "artists_list": artist_list})
 df2 = pd.DataFrame(diff_scores)
 df2.columns=['id','danceability','energy','key','loudness','mode','speechiness','acousticness', 'instrumentalness','liveness','valence', 'tempo']
@@ -165,10 +132,9 @@ df3 = pd.DataFrame(genre_list)
 df3.columns=['genre1','genre2','genre3','genre4','genre5','genre6','genre7','genre8', 'genre9','genre10','genre11', 'genre12', 'genre13', 'genre14', 'genre15', 'genre16']
 df_merge_2 = pd.concat([df_merge_1, df3], join='outer', axis=1)
 
+df_merge_2.to_sql('song_all_details', engine, schema = 'dataeng', if_exists='replace', index=False)
+
 #df_merge_2.to_csv('C:/projects/de/py/apicalls/spotify/data/song_details.csv', encoding='utf-8', mode='w+')
-
-
-
 
 
 

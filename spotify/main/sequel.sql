@@ -1,12 +1,11 @@
 /* count liked songs by year */
 
-insert into song_count ("year", song_ct)
+insert into dataeng.song_cont ("year", song_ct)
 select 
 distinct(right(date_added, 4)) as "year"
 ,count(track_list) as song_ct
-from song_details
+from dataeng.song_all_details
 group by "year" order by 1 desc;
-
 
 /* tracks by year */
 

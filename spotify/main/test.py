@@ -51,3 +51,45 @@ else:
     sys.exit()
 
 token = util.prompt_for_user_token(username, scope)
+
+
+
+
+'''
+#SETTING UP CONNECTION
+pgconn = psycopg2.connect (
+host='localhost',
+database='postgres',
+user='postgres',
+password='3231'
+)
+
+# BYPASSING TRANSACTION ERRORS WHILE USING PSYCOPG2
+from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
+pgconn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
+
+#CREATE A CURSOR
+pgcursor = pgconn.cursor()
+
+#EXECUTE SQL
+
+pgcursor.execute('select current_database()')
+
+#to get result fetchall or fetchone
+pgcursor.fetchall()
+
+#to execute, COMMIT
+
+
+#CLOSE CONNECTION
+
+'''
+
+
+from sqlalchemy import create_engine
+
+engine = create_engine('postgresql://postgres:3231@localhost:5432/postgres')
+
+
+
+df_merge_2.to_sql('song_all_details_1', engine, schema = 'dataeng', if_exists='replace', index=False)
