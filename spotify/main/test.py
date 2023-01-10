@@ -1,15 +1,42 @@
-from __future__ import print_function
-import sys
-import spotipy
-from spotipy.oauth2 import SpotifyClientCredentials
-import spotipy.util as util
+import requests
+import pandas as pd
+import matplotlib.pyplot as plt 
+from pandasql import sqldf
+from urllib.parse import urlencode
+import webbrowser
+from sqlalchemy import create_engine
+import base64
+#import psycopg2
+#import json
+#from config import config
 
+
+'''
+CREATING ENGINE FOR POSTGRES DB CONNECTION
+
+('postgresql+psycopg2://user:password@hostname/database_name')
+'''
+engine = create_engine('postgresql://postgres:3231@localhost:5432/de')
+
+#postgres DB connection#
+
+"""spotify api connection process"""
 
 client_id = "ca7fbe12e14546cb94ec1ec90c536bce"
 client_secret = "764ad9c13b9a475288eb7f5f394a2ed8"
 
-client_credentials_manager = SpotifyClientCredentials()
-sp = spotipy.Spotify(client_credentials_manager=client_credentials_manager)
+limit = 20
+offset = 0
+
+all_items = []
+add = []
+hrefs=[]
+song_list =[]
+artist_list = []
+genre_list = []
+ids = []
+diff_scores = []
+album_list=[]
 
 auth_headers = {
     "client_id": client_id,
@@ -18,78 +45,120 @@ auth_headers = {
     "scope": "user-library-read"
 }
 
+webbrowser.open("https://accounts.spotify.com/authorize?" + urlencode(auth_headers))
+
+code = str(input("enter your code here: "))
+
+encoded_credentials = base64.b64encode(client_id.encode() + b':' + client_secret.encode()).decode("utf-8")
+
+token_headers = {
+    "Authorization": "Basic " + encoded_credentials,
+    "Content-Type": "application/x-www-form-urlencoded"
+}
+
+token_data = {
+    "grant_type": "authorization_code",
+    "code": code,
+    "redirect_uri": "http://localhost:7777/callback"
+}
+
+r = requests.post("https://accounts.spotify.com/api/token", data=token_data, headers=token_headers)
+
+access_token = r.json()["access_token"]
+
+headers = {
+'Authorization': 'Bearer {}'.format(access_token)
+}
+
+response = requests.get('https://api.spotify.com/v1/me/tracks', headers=headers).json()
+
+total = response['total']  #total
+
+print("Total 'liked songs' found: ", total)
+##$ to save the json object ##
 
 
-username="x5raulz6ufun7mia2v0s6oqeq"
-scope = "user-library-read"
-token = util.prompt_for_user_token(username, scope)
+for offset in range(0, total, 20):
+        url = "https://api.spotify.com/v1/me/tracks?offset="+str(offset) + "&limit=20" 
+        response1 = requests.get(url, headers=headers).json()
+        getter = response1['items']
+        all_items.extend(getter)          
 
-util.prompt_for_user_token(username,scope,client_id='your-spotify-client-id',client_secret='your-spotify-client-secret',redirect_uri='your-app-redirect-url')
+for j in all_items:
+    dateAddd = j['added_at'] 
+    dateAdd = dateAddd[0:10]#added date
+    add.append(dateAdd)
+    s_n = [j['track']['name']]
+    Id = [j['track']['id']] #id
+    identif = ' '.join(str(v) for v in Id) 
+    ids.append(identif) 
+    song_name = ','.join(str(v) for v in s_n) 
+    song_list.append(song_name) #tracks
+    album = [j['track']['album']['name']]
+    album1 = ' '.join(str(v) for v in album) 
+    album_list.append(album1) #albums
+    artist = [j['track']['album']['artists']]
+    for g in artist:
+        if len(g) > 1:
+            art = g[0]['name'], g[1]['name']
+            artist_name = ', '.join(str(v) for v in art) 
+        else:
+            artist_name = g[0]['name']
+        artist_list.append(artist_name) #artist name
+        href = g[0]['href']
+        response2 = requests.get(href,headers=headers).json()
+        g_n = response2['genres']
+        #genress = ', '.join(str(v) for v in g_n) 
+        genre_list.append(g_n) 
+
+#########Get Audio features###########
+
+url = "https://api.spotify.com/v1/audio-features/"
+
+for i in ids:
+    urls = url + i
+    res = requests.get(urls, i, headers=headers).json()
+    dance_score = [res['id'],res['danceability'], res['energy'],res['key']
+    ,res['loudness'],res['mode'],res['speechiness'],res['acousticness']
+    ,res['instrumentalness'],res['liveness'],res['valence'], res['tempo']]
+    diff_scores.append(dance_score)
 
 
+df = pd.DataFrame({"id": ids, "date_added":add,"track_list": song_list,"album_name" : album_list, "artists_list": artist_list})
+df2 = pd.DataFrame(diff_scores)
 
-client_credentials_manager = SpotifyClientCredentials(client_id=client_id, client_secret=client_secret)
-sp = spotipy.Spotify(client_credentials_manager
-=
-client_credentials_manager)
+df2.columns=['id','danceability','energy','key','loudness','mode','speechiness','acousticness', 'instrumentalness','liveness','valence', 'tempo']
+
+
+#only merging un common columns between df and df2 since id column is repeated
+cols = df2.columns.difference(df.columns)
+df_merge_1 = pd.concat([df, df2[cols]], join = 'outer',axis=1)
+
+df3 = pd.DataFrame(genre_list)
+df3.columns=['genre1','genre2','genre3','genre4','genre5','genre6','genre7','genre8', 'genre9','genre10','genre11', 'genre12', 'genre13', 'genre14', 'genre15', 'genre16', 'genre17']
+df_merge_2 = pd.concat([df_merge_1, df3], join='outer', axis=1)
+
+#load all details to postgres
+df_merge_2.to_sql('dim_all_details', engine, schema = 'master_sp', if_exists='replace', index=False)
+
+#load df to postgres
+df.to_sql('dim_track_details', engine, schema = 'master_sp', if_exists='replace', index=False)
+
+#load track scores to postgres
+df2.to_sql('fact_track_features', engine, schema = 'master_sp', if_exists='replace', index=False)
+
+#df.to_csv('C:/projects/de/py/apicalls/spotify/data/dim_track_details.csv', encoding='utf-8', mode='w+')
+#df_merge_2.to_csv('C:/projects/de/py/apicalls/spotify/data/dim_all_details.csv', encoding='utf-8', mode='w+')
+#df2.to_csv('C:/projects/de/py/apicalls/spotify/data/fact_track_features.csv', encoding='utf-8', mode='w+')
+
+
 
 
 
 
 '''
-set SPOTIPY_CLIENT_ID="ca7fbe12e14546cb94ec1ec90c536bce"
-set SPOTIPY_CLIENT_SECRET="764ad9c13b9a475288eb7f5f394a2ed8"
-set SPOTIPY_REDIRECT_URI="http://localhost:7777/callback"
+jsonString = json.dumps(all_items)
+jsonFile = open("testdata.json", "w")
+jsonFile.write(jsonString)
+jsonFile.close()
 '''
-
-scope = 'user-library-read'
-
-if len(sys.argv) > 1:
-    username = sys.argv[1]
-else:
-    print("Usage: %s username" % (sys.argv[0],))
-    sys.exit()
-
-token = util.prompt_for_user_token(username, scope)
-
-
-
-
-'''
-#SETTING UP CONNECTION
-pgconn = psycopg2.connect (
-host='localhost',
-database='postgres',
-user='postgres',
-password='3231'
-)
-
-# BYPASSING TRANSACTION ERRORS WHILE USING PSYCOPG2
-from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
-pgconn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
-
-#CREATE A CURSOR
-pgcursor = pgconn.cursor()
-
-#EXECUTE SQL
-
-pgcursor.execute('select current_database()')
-
-#to get result fetchall or fetchone
-pgcursor.fetchall()
-
-#to execute, COMMIT
-
-
-#CLOSE CONNECTION
-
-'''
-
-
-from sqlalchemy import create_engine
-
-engine = create_engine('postgresql://postgres:3231@localhost:5432/postgres')
-
-
-
-df_merge_2.to_sql('song_all_details_1', engine, schema = 'dataeng', if_exists='replace', index=False)

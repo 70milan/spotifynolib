@@ -11,8 +11,12 @@ import base64
 #from config import config
 
 
-#CREATING ENGINE FOR POSTGRES DB CONNECTION
-engine = create_engine('postgresql://postgres:3231@localhost:5432/postgres')
+'''
+CREATING ENGINE FOR POSTGRES DB CONNECTION
+
+('postgresql+psycopg2://user:password@hostname/database_name')
+'''
+engine = create_engine('postgresql://postgres:3231@localhost:5432/de')
 
 #postgres DB connection#
 
@@ -122,19 +126,32 @@ for i in ids:
 
 df = pd.DataFrame({"id": ids, "date_added":add,"track_list": song_list,"album_name" : album_list, "artists_list": artist_list})
 df2 = pd.DataFrame(diff_scores)
+
 df2.columns=['id','danceability','energy','key','loudness','mode','speechiness','acousticness', 'instrumentalness','liveness','valence', 'tempo']
+
 
 #only merging un common columns between df and df2 since id column is repeated
 cols = df2.columns.difference(df.columns)
 df_merge_1 = pd.concat([df, df2[cols]], join = 'outer',axis=1)
 
 df3 = pd.DataFrame(genre_list)
-df3.columns=['genre1','genre2','genre3','genre4','genre5','genre6','genre7','genre8', 'genre9','genre10','genre11', 'genre12', 'genre13', 'genre14', 'genre15', 'genre16']
+df3.columns=['genre1','genre2','genre3','genre4','genre5','genre6','genre7','genre8', 'genre9','genre10','genre11', 'genre12', 'genre13', 'genre14', 'genre15', 'genre16', 'genre17']
 df_merge_2 = pd.concat([df_merge_1, df3], join='outer', axis=1)
 
-df_merge_2.to_sql('song_all_details', engine, schema = 'dataeng', if_exists='replace', index=False)
+#load all details to postgres
+df_merge_2.to_sql('dim_all_details', engine, schema = 'master_sp', if_exists='replace', index=False)
 
-#df_merge_2.to_csv('C:/projects/de/py/apicalls/spotify/data/song_details.csv', encoding='utf-8', mode='w+')
+#load df to postgres
+df.to_sql('dim_track_details', engine, schema = 'master_sp', if_exists='replace', index=False)
+
+#load track scores to postgres
+df2.to_sql('fact_track_features', engine, schema = 'master_sp', if_exists='replace', index=False)
+
+#df.to_csv('C:/projects/de/py/apicalls/spotify/data/dim_track_details.csv', encoding='utf-8', mode='w+')
+#df_merge_2.to_csv('C:/projects/de/py/apicalls/spotify/data/dim_all_details.csv', encoding='utf-8', mode='w+')
+#df2.to_csv('C:/projects/de/py/apicalls/spotify/data/fact_track_features.csv', encoding='utf-8', mode='w+')
+
+
 
 
 
